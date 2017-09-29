@@ -1,0 +1,42 @@
+	else
+		mhdrtree:add_le(f.msgid, msgid)
+	end
+	mhdrtree:add_le(f.msglen, msglen)
+	off = off + 4
+
+	-- TLVs, see GobiAPI/Core/QMIBuffers.h
+	local msgend = off + msglen:le_uint()
+	while off < msgend do
+		local tlvt = buffer(off, 1)
+		local tlvl = buffer(off+1, 2)
+		local tlvv = buffer(off+3, tlvl:le_uint())
+		local tlv_name_available = pcall(function()
+			tlv_name = tlv_description[msgid:le_uint()][tlvt:uint()]
+		end)
+		if not tlv_name_available then
+			tlv_name = "Unknown TLV"
+		end
+		if tlv_name == nil then
+			tlv_name = "Unknown TLV"
+		end
+		local treesize = tlvl:le_uint() + 3
+		local treename = string.format("TLV 0x%.2x %s", tlvt:uint(), tlv_name)
+		local tlvtree = qmitree:add(qmi_proto, buffer(off, treesize), treename)
+		tlvtree:add(f.tlvt, tlvt)
+		tlvtree:add_le(f.tlvl, tlvl)
+		tlvtree:add(f.tlvv, tlvv)
+		off = off + treesize
+	end
+
+	-- Setup columns
+	local svcstr = services[svcid:uint()] and
+			services[svcid:uint()] or string.format("0x%x", svcid:uint())
+	local typestr = indicationbit == 1 and
+			"Indication" or responsebit == 1  and "Response" or "Request"
+	msgstr = msgstr ~= nil and msgstr or string.format("0x%x", msgid:le_uint())
+	pinfo.cols.protocol:append("/QMI")
+	pinfo.cols.info:append(string.format(", %s %s: %s", svcstr, typestr, msgstr))
+end
+
+register_postdissector(qmi_proto)
+
