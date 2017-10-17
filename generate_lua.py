@@ -28,6 +28,8 @@ bad_words = ['//']
 
 services = {'ctl' : 0x00, 'wds' : 0x01, 'dms' : 0x02, 'nas' : 0x03, 'qos' : 0x04, 'wms' : 0x05, 'pds' : 0x06, 'auth' : 0x07, 'at' : 0x08, 'voice' : 0x09, 'cat2' : 0x0A, 'uim' : 0x0B, 'pbm' : 0x0C, 'rmtfs' : 0x0E, 'loc' : 0x10, 'sar' : 0x11, 'wda' : 0x1A, 'pdc' : 0x24, 'unknown' : 0xFF}
 
+common_refs = {}
+
 def include_file(src_file_name, dest_file_obj):
     with open(src_file_name) as src_file_obj:
         for line in src_file_obj:
@@ -55,6 +57,27 @@ for service in services.items():
     dissector_file.write(", ")
 dissector_file.write(" }\n\n")
 dissector_file.write("f.svcid =     ProtoField.uint8(\"qmi.service_id\", \"Service ID\", base.HEX, services)\n")
+
+# Generate dictionary of common refs
+pathlist = Path(sys.argv[1]).glob('**/*.json')
+for path in pathlist:
+    path_in_str = str(path)
+    if (path_in_str.find('common') == -1):
+        continue
+    name = path_leaf(path_in_str) + "_mod"
+
+    with open(path_in_str) as oldfile, open(name, 'w') as newfile:
+        for line in oldfile:
+            if not any(bad_word in line for bad_word in bad_words):
+                newfile.write(line)
+
+    json_data=open(name)
+    data = json.load(json_data)
+    json_data.close()
+
+    for item in data:
+        if 'id' in item:
+            common_refs.update({item['common-ref']: {'name': item['name'], 'id': item['id']}})
 
 # Generate requests and related TLVs data structures starting from libqmi json files
 pathlist = Path(sys.argv[1]).glob('**/*.json')
@@ -88,13 +111,13 @@ for path in pathlist:
 
     for item in data:
         if 'type' in item:
-            # TBD: Still to be managed indications and common TLVs
+            # TBD: Still to be managed indications
             if (item['type'] == "Message"):
                 lua_file_obj.write("[" + item['id'] + "] = \"" + item['name'] + "\"")
                 if item != data[-1]:
                     lua_file_obj.write(", ")
                 tlv_definitions_req += ("[" + item['id'] + "] = { ")
-                tlv_definitions_resp += ("[" + item['id'] + "] = { [0x02] = 'Operation Result', ")
+                tlv_definitions_resp += ("[" + item['id'] + "] = { ")
                 if item.get('input', 0) != 0:
                     for tlv in item['input']:
                         if tlv.get('id', 0) != 0:
@@ -102,6 +125,10 @@ for path in pathlist:
                                 tlv_definitions_req += ("[" + tlv['id'] + "] = '" + tlv['name'] + "', ")
                             else:
                                 tlv_definitions_req += ("[" + tlv['id'] + "] = 'unknown name', ")
+                        else:
+                            if tlv.get('common-ref', 0) != 0:
+                                if common_refs.get(tlv['common-ref'], 0) != 0:
+                                    tlv_definitions_req += ("[" + common_refs.get(tlv['common-ref']).get('id') + "] = '" + common_refs.get(tlv['common-ref']).get('name') + "', ")
                     tlv_definitions_req += ("}, ")
                 else:
                     tlv_definitions_req += ("}, ")
@@ -112,6 +139,10 @@ for path in pathlist:
                                 tlv_definitions_resp += ("[" + tlv['id'] + "] = '" + tlv['name'] + "', ")
                             else:
                                 tlv_definitions_resp += ("[" + tlv['id'] + "] = 'unknown name', ")
+                        else:
+                            if tlv.get('common-ref', 0) != 0:
+                                if common_refs.get(tlv['common-ref'], 0) != 0:
+                                    tlv_definitions_resp += ("[" + common_refs.get(tlv['common-ref']).get('id') + "] = '" + common_refs.get(tlv['common-ref']).get('name') + "', ")
                     tlv_definitions_resp += ("}, ")
                 else:
                     tlv_definitions_resp += ("}, ")
