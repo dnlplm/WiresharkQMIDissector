@@ -108,10 +108,11 @@ for path in pathlist:
     lua_file_obj.write(service + "_messages  = { ")
     tlv_definitions_req = "tlv_" + service + "_req = { "
     tlv_definitions_resp = "tlv_" + service + "_resp = { "
+    indications = service + "_indications = { "
+    tlv_definitions_ind = "tlv_" + service + "_ind = { "
 
     for item in data:
         if 'type' in item:
-            # TBD: Still to be managed indications
             if (item['type'] == "Message"):
                 lua_file_obj.write("[" + item['id'] + "] = \"" + item['name'] + "\"")
                 if item != data[-1]:
@@ -146,11 +147,30 @@ for path in pathlist:
                     tlv_definitions_resp += ("}, ")
                 else:
                     tlv_definitions_resp += ("}, ")
+            elif (item['type'] == "Indication"):
+                indications += "[" + item['id'] + "] = \"" + item['name'] + "\", "
+                tlv_definitions_ind += ("[" + item['id'] + "] = { ")
+                if item.get('output', 0) != 0:
+                    for tlv in item['output']:
+                        if tlv.get('id', 0) != 0:
+                            if tlv.get('name', 0) != 0:
+                                tlv_definitions_ind += ("[" + tlv['id'] + "] = '" + tlv['name'] + "', ")
+                            else:
+                                tlv_definitions_ind += ("[" + tlv['id'] + "] = 'unknown name', ")
+                        else:
+                            if tlv.get('common-ref', 0) != 0:
+                                if common_refs.get(tlv['common-ref'], 0) != 0:
+                                    tlv_definitions_ind += ("[" + common_refs.get(tlv['common-ref']).get('id') + "] = '" + common_refs.get(tlv['common-ref']).get('name') + "', ")
+                    tlv_definitions_ind += ("}, ")
+                else:
+                    tlv_definitions_ind += ("}, ")
     lua_file_obj.write(" }" + '\n')
     lua_file_obj.write("f.msgid_" + service + " = ProtoField.uint16(\"qmi.message_id\", \"Message ID\", base.HEX," + " " + service + "_messages)")
     lua_file_obj.write('\n\n')
     lua_file_obj.write(tlv_definitions_req + '}\n\n')
     lua_file_obj.write(tlv_definitions_resp + '}\n\n')
+    lua_file_obj.write(indications + '}\n\n')
+    lua_file_obj.write(tlv_definitions_ind + '}\n\n')
     lua_file_obj.close()
     include_file(lua_file, dissector_file)
 
@@ -168,10 +188,14 @@ for service in services.items():
         else:
             dissector_file.write("\telseif svcid:uint() == " + str(service[1]) + " then\n")
         dissector_file.write("\t\tmhdrtree:add_le(f.msgid_" + str(service[0]) + ", msgid)\n")
-        dissector_file.write("\t\tmsgstr = " + str(service[0]) + "_messages[msgid:le_uint()]\n")
-        dissector_file.write("\t\tif responsebit == 1 or indicationbit == 1 then\n")
+        dissector_file.write("\t\tif indicationbit == 1 then\n")
+        dissector_file.write("\t\t\tmsgstr = " + str(service[0]) + "_indications[msgid:le_uint()]\n")
+        dissector_file.write("\t\t\ttlv_description = tlv_" + str(service[0]) + "_ind\n")
+        dissector_file.write("\t\telseif responsebit == 1 then\n")
+        dissector_file.write("\t\t\tmsgstr = " + str(service[0]) + "_messages[msgid:le_uint()]\n")
         dissector_file.write("\t\t\ttlv_description = tlv_" + str(service[0]) + "_resp\n")
         dissector_file.write("\t\telse\n")
+        dissector_file.write("\t\t\tmsgstr = " + str(service[0]) + "_messages[msgid:le_uint()]\n")
         dissector_file.write("\t\t\ttlv_description = tlv_" + str(service[0]) + "_req\n")
         dissector_file.write("\t\tend\n")
 
