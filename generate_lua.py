@@ -105,7 +105,7 @@ for path in pathlist:
 
     lua_file = service + ".lua"
     lua_file_obj = open(lua_file, 'w')
-    lua_file_obj.write(service + "_messages  = { ")
+    messages = service + "_messages  = { "
     tlv_definitions_req = "tlv_" + service + "_req = { "
     tlv_definitions_resp = "tlv_" + service + "_resp = { "
     indications = service + "_indications = { "
@@ -114,9 +114,7 @@ for path in pathlist:
     for item in data:
         if 'type' in item:
             if (item['type'] == "Message"):
-                lua_file_obj.write("[" + item['id'] + "] = \"" + item['name'] + "\"")
-                if item != data[-1]:
-                    lua_file_obj.write(", ")
+                messages += "[" + item['id'] + "] = \"" + item['name'] + "\", "
                 tlv_definitions_req += ("[" + item['id'] + "] = { ")
                 tlv_definitions_resp += ("[" + item['id'] + "] = { ")
                 if item.get('input', 0) != 0:
@@ -164,7 +162,7 @@ for path in pathlist:
                     tlv_definitions_ind += ("}, ")
                 else:
                     tlv_definitions_ind += ("}, ")
-    lua_file_obj.write(" }" + '\n')
+    lua_file_obj.write(messages + ' }\n\n')
     lua_file_obj.write("f.msgid_" + service + " = ProtoField.uint16(\"qmi.message_id\", \"Message ID\", base.HEX," + " " + service + "_messages)")
     lua_file_obj.write('\n\n')
     lua_file_obj.write(tlv_definitions_req + '}\n\n')
