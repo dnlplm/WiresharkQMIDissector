@@ -62,6 +62,11 @@ def path_leaf(path):
     head, tail = ntpath.split(path)
     return tail or ntpath.basename(head)
 
+def polish_json(source, dest):
+    with open(source) as oldfile, open(name, 'w') as dest:
+        for line in oldfile:
+            if not any(bad_word in line for bad_word in bad_words):
+                dest.write(line)
 
 if (len(sys.argv) != 2):
     sys.stderr.write("Usage: generate.lua.py <libqmi json directory path>\n")
@@ -93,10 +98,7 @@ for path in pathlist:
         continue
     name = path_leaf(path_in_str) + "_mod"
 
-    with open(path_in_str) as oldfile, open(name, 'w') as newfile:
-        for line in oldfile:
-            if not any(bad_word in line for bad_word in bad_words):
-                newfile.write(line)
+    polish_json(path_in_str, name)
 
     json_data = open(name)
     data = json.load(json_data)
@@ -120,10 +122,7 @@ for path in pathlist:
         continue
     name = path_leaf(path_in_str) + "_mod"
 
-    with open(path_in_str) as oldfile, open(name, 'w') as newfile:
-        for line in oldfile:
-            if not any(bad_word in line for bad_word in bad_words):
-                newfile.write(line)
+    polish_json(path_in_str, name)
 
     json_data = open(name)
     data = json.load(json_data)
