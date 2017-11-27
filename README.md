@@ -20,9 +20,12 @@ Based on:
 
 - Generate the dissector with:
 
-    generate_lua.py <libqmi json directory path>
+    generate_lua.py &lt;libqmi json directory path&gt;
 
     to create qmi_dissector_gen.lua
+
+    Script runs with python 3.x or 2.x. For python <3.4 install pathlib 
+using pip install pathlib.
 
 Once the dissector has been generated:
 
