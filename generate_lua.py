@@ -246,23 +246,30 @@ for service in services.items():
         else:
             dissector_file.write("\telseif svcid:uint() == " + str(service[1])
                                  + " then\n")
-        dissector_file.write("\t\tmhdrtree:add_le(f.msgid_" + str(service[0]) +
+        dissector_file.write("\t\tif f.msgid_" + str(service[0]) + " ~= nil then\n");
+        dissector_file.write("\t\t\tmhdrtree:add_le(f.msgid_" + str(service[0]) +
                              ", msgid)\n")
-        dissector_file.write("\t\tif indicationbit == 1 then\n")
-        dissector_file.write("\t\t\tmsgstr = " + str(service[0]) +
+        dissector_file.write("\t\t\tif " + str(service[0]) + "_indications ~= nil then\n")
+        dissector_file.write("\t\t\t\tif indicationbit == 1 then\n")
+        dissector_file.write("\t\t\t\t\tmsgstr = " + str(service[0]) +
                              "_indications[msgid:le_uint()]\n")
-        dissector_file.write("\t\t\ttlv_description = tlv_" + str(service[0]) +
+        dissector_file.write("\t\t\t\t\ttlv_description = tlv_" + str(service[0]) +
                              "_ind\n")
-        dissector_file.write("\t\telseif responsebit == 1 then\n")
-        dissector_file.write("\t\t\tmsgstr = " + str(service[0]) +
+        dissector_file.write("\t\t\t\tend\n")
+        dissector_file.write("\t\t\tend\n")
+        dissector_file.write("\t\t\tif " + str(service[0]) + "_messages ~= nil then\n")
+        dissector_file.write("\t\t\t\tif responsebit == 1 then\n")
+        dissector_file.write("\t\t\t\t\tmsgstr = " + str(service[0]) +
                              "_messages[msgid:le_uint()]\n")
-        dissector_file.write("\t\t\ttlv_description = tlv_" + str(service[0]) +
+        dissector_file.write("\t\t\t\t\ttlv_description = tlv_" + str(service[0]) +
                              "_resp\n")
-        dissector_file.write("\t\telse\n")
-        dissector_file.write("\t\t\tmsgstr = " + str(service[0]) +
+        dissector_file.write("\t\t\t\telse\n")
+        dissector_file.write("\t\t\t\t\tmsgstr = " + str(service[0]) +
                              "_messages[msgid:le_uint()]\n")
-        dissector_file.write("\t\t\ttlv_description = tlv_" + str(service[0]) +
+        dissector_file.write("\t\t\t\t\ttlv_description = tlv_" + str(service[0]) +
                              "_req\n")
+        dissector_file.write("\t\t\t\tend\n")
+        dissector_file.write("\t\t\tend\n")
         dissector_file.write("\t\tend\n")
 
 include_file('qmi_dissector_trailer.part', dissector_file)
