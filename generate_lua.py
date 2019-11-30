@@ -143,6 +143,8 @@ for path in pathlist:
     indications = service + "_indications = { "
     tlv_definitions_ind = "tlv_" + service + "_ind = { "
 
+    common_refs_service = {}
+
     for item in data:
         if 'type' in item:
             if (item['type'] == "Message"):
@@ -168,6 +170,14 @@ for path in pathlist:
                                         "] = '" + common_refs.get(
                                             tlv['common-ref']).get('name') +
                                         "', ")
+                                else:
+                                    if common_refs_service.get(tlv['common-ref'], 0) != 0:
+                                        tlv_definitions_req += (
+                                            "[" + common_refs_service.get(
+                                                tlv['common-ref']).get('id') +
+                                            "] = '" + common_refs_service.get(
+                                                tlv['common-ref']).get('name') +
+                                            "', ")
                     tlv_definitions_req += ("}, ")
                 else:
                     tlv_definitions_req += ("}, ")
@@ -190,6 +200,14 @@ for path in pathlist:
                                         "] = '" + common_refs.get(
                                             tlv['common-ref']).get('name') +
                                         "', ")
+                                else:
+                                    if common_refs_service.get(tlv['common-ref'], 0) != 0:
+                                        tlv_definitions_resp += (
+                                            "[" + common_refs_service.get(
+                                                tlv['common-ref']).get('id') +
+                                            "] = '" + common_refs_service.get(
+                                                tlv['common-ref']).get('name') +
+                                            "', ")
                     tlv_definitions_resp += ("}, ")
                 else:
                     tlv_definitions_resp += ("}, ")
@@ -215,9 +233,26 @@ for path in pathlist:
                                         "] = '" + common_refs.get(
                                             tlv['common-ref']).get('name') +
                                         "', ")
+                                else:
+                                    if common_refs_service.get(tlv['common-ref'], 0) != 0:
+                                        tlv_definitions_ind += (
+                                            "[" + common_refs_service.get(
+                                                tlv['common-ref']).get('id') +
+                                            "] = '" + common_refs_service.get(
+                                                tlv['common-ref']).get('name') +
+                                            "', ")
                     tlv_definitions_ind += ("}, ")
                 else:
                     tlv_definitions_ind += ("}, ")
+            elif (item['type'] == "TLV"):
+                if item.get('common-ref', 0) != 0 and item.get('id', 0) != 0:
+                    common_refs_service.update({
+                        item['common-ref']: {
+                            'name': item['name'],
+                            'id': item['id']
+                        }
+                    })
+
     lua_file_obj.write(messages + ' }\n\n')
     lua_file_obj.write(
         "f.msgid_" + service +
