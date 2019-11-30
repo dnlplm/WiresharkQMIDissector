@@ -45,7 +45,10 @@ services = {
     'loc': 0x10,
     'sar': 0x11,
     'wda': 0x1A,
+    'dsd': 0x2A,
     'pdc': 0x24,
+    'oma': 0xE2,
+    'gas': 0xE8,
     'unknown': 0xFF
 }
 
