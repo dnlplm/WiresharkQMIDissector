@@ -21,8 +21,14 @@ function qmi_proto.dissector(buffer, pinfo, tree)
 		return
 	end
 
-	-- QMUX Header (6 bytes), see GobiNet/QMI.h
-	local tf = buffer(off,1)	-- Always 0x01
+	local tf = buffer(off,1)
+	if off == 28 and tf:uint() == 0x21 then
+		-- In Windows we should skip the setup data part
+		off = off + 8
+		tf = buffer(off,1)	-- Now it should be 0x01, the initial byte for QMUX header
+	end
+
+	-- QMUX Header (6 bytes), see GobiNet/QMI.h, should always start with 0x01
 	if tf:uint() ~= 1 then
 		-- Not a QMI packet
 		return
