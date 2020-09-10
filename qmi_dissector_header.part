@@ -54,6 +54,10 @@ WINDOWS
 
 --]]
 
+--- QMI-over-MBIM service UUID
+
+qmi_over_mbim_service_uuid = ByteArray.new("d1 a3 0b c2 f9 7a 6e 43 bf 65 c7 e2 4f b0 f0 d3")
+
 ---
 --- Proto declaration
 ---
@@ -62,6 +66,13 @@ qmi_proto = Proto("qmi", "Qualcomm MSM Interface")
 --
 -- Fields
 --
+
+-- Generic USB and MBIM fields for QMI-over-MBIM
+usb_bInterfaceClass_f = Field.new("usb.bInterfaceClass")
+mbim_control_header_message_type_f = Field.new("mbim.control.header.message_type")
+
+-- QMI fields
+
 local f = qmi_proto.fields
 
 -- QMUX Header

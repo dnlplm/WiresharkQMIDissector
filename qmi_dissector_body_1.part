@@ -5,9 +5,38 @@ f.tlvl =      ProtoField.uint16("qmi.tlv_len", "TLV Length", base.DEC)
 f.tlvv =      ProtoField.bytes("qmi.tlv_value", "TLV Value")
 
 --
+-- Utils Functions
+--
+
+compare_tvb = function(a1,a2,a_len)
+	for i=0,a_len-1
+		do
+			if a1(i,1):uint() ~= a2(i,1):uint() then return false end
+		end
+
+		return true
+	end
+
+local function getstring(finfo)
+	local ok, val = pcall(tostring, finfo)
+	if not ok then val = "(unknown)" end
+	return val
+end
+
+--
 -- Dissector Function
 --
 function qmi_proto.dissector(buffer, pinfo, tree)
+	local is_mbim = false
+	local usb_bInterfaceClass = usb_bInterfaceClass_f()
+
+	-- Check if this is QMI-over-MBIM looking at the interface class that should be CDC
+	if getstring(usb_bInterfaceClass) == "2" then
+		is_mbim = true
+		tvb_qmi_over_mbim_service_uuid = ByteArray.tvb(qmi_over_mbim_service_uuid, "qmi_over_mbim_service_uuid Tvb")
+		len_tvb_qmi_over_mbim_service_uuid = tvb_qmi_over_mbim_service_uuid:len()
+	end
+
 	-- Set offset according to operating system
 	local off
 	if package.config:sub(1,1) == '\\' then
@@ -19,6 +48,42 @@ function qmi_proto.dissector(buffer, pinfo, tree)
 	if buffer:len() - off < 12 then
 		-- No payload or too short (12 is a min size)
 		return
+	end
+
+	-- If this is QMI-over-MBIM check length to avoid parsing all the other MBIM messages different than the ones indicated below (off + MBIM INDICATE header size is the smallest packet)
+	if is_mbim and buffer:len() > (off + 44) then
+		local offset_mbim_service_uuid
+		local additional_offset_to_qmi
+		local mbim_control_header_message_type = mbim_control_header_message_type_f()
+
+		-- MBIM message types:
+		-- 0x00000003 MBIM COMMAND MSG
+		-- 0x80000003 MBIM COMMAND DONE
+		-- 0x80000007 MBIM INDICATE
+		if getstring(mbim_control_header_message_type) == "0x00000003" then
+			-- offset_mbim_service_uuid = off (that could be USBpcap pseudoheader (28) or URB header size (64)) + USB SEND ENCAPSULATED COMMAND (8) + MBIM COMMAND MSG up to device_service_uuid (20)
+			offset_mbim_service_uuid = off + 8 + 20
+			-- additional_offset_to_qmi = len_tvb_qmi_over_mbim_service_uuid + remaining MBIM COMMAND MSG header to information buffer (12)
+			additional_offset_to_qmi = len_tvb_qmi_over_mbim_service_uuid + 12
+		elseif getstring(mbim_control_header_message_type) == "0x80000003" then
+			-- offset_mbim_service_uuid = off (that could be USBpcap pseudoheader (28) or URB header size (64)) + MBIM COMMAND DONE up to device_service_uuid (20)
+			offset_mbim_service_uuid = off + 20
+			-- additional_offset_to_qmi = len_tvb_qmi_over_mbim_service_uuid + remaining MBIM COMMAND DONE header to information buffer (12)
+			additional_offset_to_qmi = len_tvb_qmi_over_mbim_service_uuid + 12
+		elseif getstring(mbim_control_header_message_type) == "0x80000007" then
+			-- offset_mbim_service_uuid = off (that could be USBpcap pseudoheader (28) or URB header size (64)) + MBIM INDICATE up to device_service_uuid (20)
+			offset_mbim_service_uuid = off + 20
+			-- additional_offset_to_qmi = len_tvb_qmi_over_mbim_service_uuid + remaining MBIM INDICATE header to information buffer (8)
+			additional_offset_to_qmi = len_tvb_qmi_over_mbim_service_uuid + 8
+		else
+			return
+		end
+
+		local mbim_service_uuid = buffer(offset_mbim_service_uuid, len_tvb_qmi_over_mbim_service_uuid)
+
+		if compare_tvb(tvb_qmi_over_mbim_service_uuid, mbim_service_uuid, len_tvb_qmi_over_mbim_service_uuid) == true then
+			off = offset_mbim_service_uuid + additional_offset_to_qmi
+		end
 	end
 
 	local tf = buffer(off,1)
