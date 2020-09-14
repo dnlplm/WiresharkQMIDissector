@@ -40,9 +40,11 @@ function qmi_proto.dissector(buffer, pinfo, tree)
 	-- Set offset according to operating system
 	local off
 	if package.config:sub(1,1) == '\\' then
-		off = 28			-- USB pcap pseudoheader
+		off = 28			-- USB pcap pseudoheader: does not include setup data, so URB size depends being a request or response
+		setup_data = 8
 	else
-		off = 64			-- URB header size
+		off = 64			-- URB header size: this includes setup data or padding, so size is always the same
+		setup_data = 0
 	end
 
 	if buffer:len() - off < 12 then
@@ -61,8 +63,8 @@ function qmi_proto.dissector(buffer, pinfo, tree)
 		-- 0x80000003 MBIM COMMAND DONE
 		-- 0x80000007 MBIM INDICATE
 		if getstring(mbim_control_header_message_type) == "0x00000003" then
-			-- offset_mbim_service_uuid = off (that could be USBpcap pseudoheader (28) or URB header size (64)) + USB SEND ENCAPSULATED COMMAND (8) + MBIM COMMAND MSG up to device_service_uuid (20)
-			offset_mbim_service_uuid = off + 8 + 20
+			-- offset_mbim_service_uuid = off (that could be USBpcap pseudoheader (28) or URB header size (64)) + setup data size + USB SEND ENCAPSULATED COMMAND (8) + MBIM COMMAND MSG up to device_service_uuid (20)
+			offset_mbim_service_uuid = off + setup_data + 20
 			-- additional_offset_to_qmi = len_tvb_qmi_over_mbim_service_uuid + remaining MBIM COMMAND MSG header to information buffer (12)
 			additional_offset_to_qmi = len_tvb_qmi_over_mbim_service_uuid + 12
 		elseif getstring(mbim_control_header_message_type) == "0x80000003" then
@@ -88,8 +90,8 @@ function qmi_proto.dissector(buffer, pinfo, tree)
 
 	local tf = buffer(off,1)
 	if off == 28 and tf:uint() == 0x21 then
-		-- In Windows we should skip the setup data part
-		off = off + 8
+		-- In Windows we should skip the setup data part in requests
+		off = off + setup_data
 		tf = buffer(off,1)	-- Now it should be 0x01, the initial byte for QMUX header
 	end
 
