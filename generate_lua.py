@@ -266,6 +266,12 @@ for path in pathlist:
     lua_file_obj.write(tlv_definitions_resp + '}\n\n')
     lua_file_obj.write(indications + '}\n\n')
     lua_file_obj.write(tlv_definitions_ind + '}\n\n')
+    lua_file_obj.write('\n\n')
+    lua_file_obj.write(
+        "f.msgid_" + service + "_ind" +
+        " = ProtoField.uint16(\"qmi.message_id\", \"Message ID\", base.HEX," +
+        " " + service + "_indications)")
+    lua_file_obj.write('\n\n')
     lua_file_obj.close()
     include_file(lua_file, dissector_file)
 
@@ -285,9 +291,9 @@ for service in services.items():
             dissector_file.write("\telseif svcid:uint() == " + str(service[1])
                                  + " then\n")
         dissector_file.write("\t\tif f.msgid_" + str(service[0]) + " ~= nil then\n");
-        dissector_file.write("\t\t\tmhdrtree:add_le(f.msgid_" + str(service[0]) +
-                             ", msgid)\n")
         dissector_file.write("\t\t\tif indicationbit == 1 then\n")
+        dissector_file.write("\t\t\t\tmhdrtree:add_le(f.msgid_" + str(service[0]) + "_ind" +
+                             ", msgid)\n")
         dissector_file.write("\t\t\t\tif " + str(service[0]) + "_indications ~= nil then\n")
         dissector_file.write("\t\t\t\t\tmsgstr = " + str(service[0]) +
                              "_indications[msgid:le_uint()]\n")
@@ -295,6 +301,8 @@ for service in services.items():
                              "_ind\n")
         dissector_file.write("\t\t\t\tend\n")
         dissector_file.write("\t\t\telse\n")
+        dissector_file.write("\t\t\t\tmhdrtree:add_le(f.msgid_" + str(service[0]) +
+                             ", msgid)\n")
         dissector_file.write("\t\t\t\tif " + str(service[0]) + "_messages ~= nil then\n")
         dissector_file.write("\t\t\t\t\tif responsebit == 1 then\n")
         dissector_file.write("\t\t\t\t\t\tmsgstr = " + str(service[0]) +
