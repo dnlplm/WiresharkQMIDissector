@@ -44,10 +44,16 @@ services = {
     'rmtfs': 0x0E,
     'loc': 0x10,
     'sar': 0x11,
+    'ims': 0x12,
     'wda': 0x1A,
+    'imsp': 0x1F,
+    'imsa': 0x21,
     'dsd': 0x2A,
     'pdc': 0x24,
+    'dpm': 0x2F,
     'oma': 0xE2,
+    'fox': 0xE3,
+    'gms': 0xE7,
     'gas': 0xE8,
     'unknown': 0xFF
 }
