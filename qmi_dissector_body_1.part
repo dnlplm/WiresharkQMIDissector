@@ -31,7 +31,7 @@ function qmi_proto.dissector(buffer, pinfo, tree)
 	local usb_bInterfaceClass = usb_bInterfaceClass_f()
 
 	-- Check if this is QMI-over-MBIM looking at the interface class that should be CDC
-	if getstring(usb_bInterfaceClass) == "2" then
+	if getstring(usb_bInterfaceClass) == "2" or getstring(usb_bInterfaceClass) == "0x02" then
 		is_mbim = true
 		tvb_qmi_over_mbim_service_uuid = ByteArray.tvb(qmi_over_mbim_service_uuid, "qmi_over_mbim_service_uuid Tvb")
 		len_tvb_qmi_over_mbim_service_uuid = tvb_qmi_over_mbim_service_uuid:len()
