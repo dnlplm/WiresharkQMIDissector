@@ -20,6 +20,7 @@
 
 # pathlib required
 
+import re
 import sys
 import json
 import ntpath
@@ -122,27 +123,29 @@ for path in pathlist:
                 }
             })
 
+FILE_PATTERN = re.compile(r'qmi-service-([a-zA-Z]+).json')
 # Generate requests and related TLVs data structures starting from libqmi
 # json files
 pathlist = Path(sys.argv[1]).glob('**/*.json')
 for path in pathlist:
-    path_in_str = str(path)
-    if (path_in_str.find('common') != -1) or (path_in_str.find('FULL') != -1):
+    matches = FILE_PATTERN.match(path.name)
+    if not matches:
+        print(f"Ignoring file {path}: unknown file pattern. Must match pattern '{FILE_PATTERN.pattern}'.")
         continue
-    name = path_leaf(path_in_str) + "_mod"
 
+    service = matches.groups()[0]
+    if service not in services:
+        print(f"Ignoring unknown service {service} ({path})")
+        continue
+
+    name = path_leaf(str(path)) + "_mod"
     polish_json(path_in_str, name)
 
     json_data = open(name)
     data = json.load(json_data)
     json_data.close()
 
-    for service in services.keys():
-        if (name.find(service) != -1):
-            break
-
-    if service == 'unknown':
-        continue
+    print(f"Creating dissector for service {service}")
 
     lua_file = service + ".lua"
     lua_file_obj = open(lua_file, 'w')
